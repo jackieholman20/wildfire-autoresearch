@@ -1,20 +1,20 @@
-# AutoResearch Demo: California Housing Regression
+# AutoResearch Driven Discovery of Composite Satellite Metrics for Predicting Wildfire Spread
 
-A minimal, CPU-only AutoResearch project for **STAT 390** class demonstration.
-Shows the full agent loop: modify code → evaluate → keep or discard → repeat.
+Predicting the spread of fires can be extremely important for evacuation protocol and for firefighting efforts. However, wildfire expansion is influenced by interacting environmental factors that no single satellite variable captures. This project uses an AutoResearch agent to autonomously explore combinations of 12 satellite‑derived features to discover a composite metric that predicts next‑day wildfire spread more effectively than any individual variable. The agent checks to see if the ROC_AUC is better than the previous iteration, then keeps or discards the built model and continues the process. The agent iterates through the loop: modify code → evaluate → keep or discard → repeat.
 
 ---
 
 ## Problem
 
-Predict California median house values.
-**Metric**: validation RMSE (lower is better).
-**Data**: sklearn built-in California Housing (no download needed).
+Predict wildfire spread.
+**Metric**: validation ROC-AUC (lower is better).
+**Data**: Kaggle dataset "Next Day Wildfire Spread" (Huot et al.)
+
 
 ## Project Structure
 
 ```
-demo_autoresearch/
+wildfire-autoresearch/
 ├── prepare.py      # FROZEN — data loading, evaluation metric, plotting
 ├── model.py        # EDITABLE — agent modifies only this file
 ├── run.py          # Run a single experiment and log result
