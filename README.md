@@ -8,7 +8,26 @@ Predicting the spread of fires can be extremely important for evacuation protoco
 
 Predict wildfire spread.
 **Metric**: validation ROC-AUC (lower is better).
-**Data**: Kaggle dataset "Next Day Wildfire Spread" (Huot et al.)
+
+##Data 
+This project uses the **Next Day Wildfire Spread** dataset
+(Huot et al., Kaggle).
+
+The TFRecord files are not included in this repository
+due to file size constraints.
+
+**How to obtain the data**
+
+1. Download the dataset from Kaggle:
+   https://www.kaggle.com/datasets/huot25/next-day-wildfire-spread
+
+2. Place the TFRecord files locally in the following structure:
+
+data/
+├── next_day_wildfire_spread_train_*.tfrecord
+├── next_day_wildfire_spread_eval_*.tfrecord
+└── next_day_wildfire_spread_test_*.tfrecord
+
 
 
 ## Project Structure
