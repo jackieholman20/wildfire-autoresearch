@@ -93,7 +93,7 @@ def _parse_fn(
 
     input_img = tf.transpose(tf.stack(inputs, axis=0), [1, 2, 0])
     output_img = tf.transpose(tf.stack([features['FireMask']], axis=0), [1, 2, 0])
-    output_img = tf.where(output_img < 0, 0, output_img)
+    output_img = tf.where(output_img < 0, tf.zeros_like(output_img), output_img)
 
     return input_img, output_img
 

@@ -1,64 +1,49 @@
 """
-Run one experiment: build model, train, evaluate, log result.
+Run a single experiment.
 
-Usage:
-    python run.py "description"              # logs as status=keep
-    python run.py "description" --baseline   # logs as status=baseline
-    python run.py "description" --discard    # logs as status=discard
+This file is a thin orchestration layer:
+- Loads data via prepare.py
+- Evaluates the current model (from model.py)
+- Logs results to results.tsv
+- Updates performance.png
+
+This file SHOULD NOT contain modeling or preprocessing logic.
 """
-import sys
-import time
-import subprocess
-from prepare import load_data, evaluate, log_result
 
-
-def get_git_hash():
-    try:
-        return subprocess.check_output(
-            ["git", "rev-parse", "--short", "HEAD"],
-            stderr=subprocess.DEVNULL,
-        ).decode().strip()
-    except Exception:
-        return "no-git"
+import prepare
 
 
 def main():
-    args = sys.argv[1:]
-    status = "keep"
-    description_parts = []
-    for a in args:
-        if a == "--baseline":
-            status = "baseline"
-        elif a == "--discard":
-            status = "discard"
-        else:
-            description_parts.append(a)
-    description = " ".join(description_parts) if description_parts else "experiment"
-
+    # --------------------------------------------------------
     # 1. Load data (frozen)
-    X_train, y_train, X_val, y_val, feature_names = load_data()
-    print(f"Data: {X_train.shape[0]} train, {X_val.shape[0]} val, {len(feature_names)} features")
+    # --------------------------------------------------------
+    # Returns:
+    #   df_train : pd.DataFrame
+    #   df_eval  : pd.DataFrame
+    df_train, df_eval = prepare.load_data()
 
-    # 2. Build model (editable)
-    from model import build_model
-    model = build_model()
-    print(f"Model: {model}")
+    # --------------------------------------------------------
+    # 2. Evaluate current model (from model.py)
+    # --------------------------------------------------------
+    # Returns validation ROC-AUC
+    val_auc = prepare.evaluate(df_train, df_eval)
 
-    # 3. Train
-    t0 = time.time()
-    model.fit(X_train, y_train)
-    train_time = time.time() - t0
-    print(f"Training time: {train_time:.2f}s")
+    # --------------------------------------------------------
+    # 3. Log results
+    # --------------------------------------------------------
+    prepare.log_result(
+        experiment_id="baseline",
+        val_auc=val_auc,
+        status="baseline",
+        description="Wind speed logistic regression baseline"
+    )
 
-    # 4. Evaluate (frozen metric)
-    val_rmse, val_r2 = evaluate(model, X_val, y_val)
-    print(f"val_rmse: {val_rmse:.6f}")
-    print(f"val_r2:   {val_r2:.6f}")
+    # --------------------------------------------------------
+    # 4. Update performance plot
+    # --------------------------------------------------------
+    prepare.plot_results()
 
-    # 5. Log
-    commit = get_git_hash()
-    log_result(commit, val_rmse, val_r2, status, description)
-    print(f"Result logged to results.tsv (status={status})")
+    print(f"✅ Run completed. Validation ROC-AUC: {val_auc:.4f}")
 
 
 if __name__ == "__main__":
