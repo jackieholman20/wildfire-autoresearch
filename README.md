@@ -7,7 +7,7 @@ Predicting the spread of fires can be extremely important for evacuation protoco
 ## Problem
 
 Predict wildfire spread.
-**Metric**: validation ROC-AUC (lower is better).
+**Metric**: validation ROC-AUC.
 
 ## Data 
 This project uses the **Next Day Wildfire Spread** dataset
