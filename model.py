@@ -40,7 +40,7 @@ def compute_metric(df_train, df_eval):
     # ------------------------------
     # Baseline feature(s)
     # ------------------------------
-    X_train = df_train[["vs_mean"]]
+    X_train = df_train[["vs_mean", "erc_mean"]]
     y_train = df_train["fire_any"]
 
     # ------------------------------
@@ -57,5 +57,5 @@ def compute_metric(df_train, df_eval):
     # ------------------------------
     # Return probabilities for ROC‑AUC
     # ------------------------------
-    probs = model.predict_proba(df_eval[["vs_mean"]])[:, 1]
+    probs = model.predict_proba(df_eval[["vs_mean", "erc_mean"]])[:, 1]
     return probs
