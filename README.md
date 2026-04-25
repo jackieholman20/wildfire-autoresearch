@@ -9,8 +9,9 @@ The goal is to autonomously discover composite environmental metrics that outper
 
 ## Problem
 
-**Task**: Predict whether wildfire spreads within a 64×64 km region over the next 24 hours.
-**Metric**: Validation ROC‑AUC (higher is better).
+- **Task**: Predict whether wildfire spreads within a 64×64 km region over the next 24 hours
+- **Metric**: Validation ROC‑AUC (higher is better)
+
 The agent’s objective is to iteratively improve ROC‑AUC relative to a simple, interpretable baseline.
 
 
@@ -41,11 +42,11 @@ data/
 
 Instead of manually designing features and models, this project delegates exploration to an AI‑driven retry loop:
 
-Propose a candidate composite metric or model modification
-Train and evaluate it using a frozen evaluation pipeline
-Compare validation ROC‑AUC against the current best
-Keep if improved, discard if worse
-Repeat autonomously
+- Propose a candidate composite metric or model modification
+- Train and evaluate it using a frozen evaluation pipeline  
+- Compare validation ROC‑AUC against the current best  
+- Keep if improved, discard if worse  
+- Repeat autonomously
 
 The human defines what “good” means; the agent performs the search.
 
@@ -72,10 +73,10 @@ wildfire-autoresearch/
 ## Baseline Model
 **Before any autonomous exploration, we establish a simple baseline:**
 
-Model: Logistic regression
-Feature: Mean wind speed per tile (vs_mean)
-Rationale: Wind is a physically meaningful driver of fire spread
-Interpretability: Coefficients map directly to odds of spread
+- **Model**: Logistic regression
+- **Feature**: Mean wind speed per tile (`vs_mean`)  
+- **Rationale**: Wind is a physically meaningful driver of fire spread  
+- **Interpretability**: Coefficients map directly to odds of spread  
 
 Baseline Performance
 
@@ -173,10 +174,9 @@ python3 -c "import sklearn, matplotlib, numpy; print('All good')"
 ```
 
 ### 4. Run the baseline experiment
-```
+
+```bash
 python run.py
-rm -f results.tsv
-```
 
 ---
 
