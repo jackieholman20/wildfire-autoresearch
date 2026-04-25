@@ -1,82 +1,87 @@
 """
 Feature extraction utilities.
 
-This module converts spatial tiles produced by TFRecord datasets
-into tabular, tile-level features suitable for statistical models
-(e.g., logistic regression) and AutoResearch experiments.
+This module defines the full, fixed feature universe available to
+AutoResearch. Each spatial TFRecord tile is aggregated into a single
+row of tabular features.
+
+This file should be edited ONCE and then treated as frozen.
 """
 
-import numpy as np
-import pandas as pd
 import tensorflow as tf
-from typing import Dict
+import pandas as pd
 
 
-# Single-tile feature extraction
-
-def tile_to_features(
-    inputs: tf.Tensor,
-    labels: tf.Tensor
-) -> Dict[str, float]:
+def tile_to_features(inputs: tf.Tensor, labels: tf.Tensor) -> dict:
     """
     Convert a single spatial tile into tabular features.
 
     Parameters
     ----------
     inputs : tf.Tensor
-        Input tile of shape (H, W, C), already preprocessed.
-        Wind speed (vs) is assumed to be channel index 2.
+        Shape (H, W, 12), preprocessed input channels in fixed order.
     labels : tf.Tensor
-        Output fire mask of shape (H, W, 1).
+        Shape (H, W, 1), next-day fire mask.
 
     Returns
     -------
-    Dict[str, float]
-        Dictionary containing:
-          - vs_mean  : mean normalized wind speed per tile
-          - fire_any : binary indicator of next-day fire presence
+    dict
+        Dictionary of scalar features for one tile.
     """
-    # Wind speed is channel index 2
-    vs_tile = inputs[:, :, 2]
-
-    # Binary label: did fire occur anywhere in tile?
-    fire_any = int(tf.reduce_max(labels) > 0)
 
     return {
-        "vs_mean": float(tf.reduce_mean(vs_tile).numpy()),
-        "fire_any": fire_any
+        # Topography
+        "elevation_mean": tf.reduce_mean(inputs[:, :, 0]).numpy(),
+
+        # Wind
+        "th_mean": tf.reduce_mean(inputs[:, :, 1]).numpy(),
+        "vs_mean": tf.reduce_mean(inputs[:, :, 2]).numpy(),
+
+        # Temperature
+        "tmmn_mean": tf.reduce_mean(inputs[:, :, 3]).numpy(),
+        "tmmx_mean": tf.reduce_mean(inputs[:, :, 4]).numpy(),
+
+        # Atmosphere / moisture
+        "sph_mean": tf.reduce_mean(inputs[:, :, 5]).numpy(),
+        "pr_mean": tf.reduce_mean(inputs[:, :, 6]).numpy(),
+
+        # Drought / vegetation
+        "pdsi_mean": tf.reduce_mean(inputs[:, :, 7]).numpy(),
+        "ndvi_mean": tf.reduce_mean(inputs[:, :, 8]).numpy(),
+
+        # Human factors
+        "population_mean": tf.reduce_mean(inputs[:, :, 9]).numpy(),
+
+        # Fire danger
+        "erc_mean": tf.reduce_mean(inputs[:, :, 10]).numpy(),
+
+        # Previous fire (context)
+        "prev_fire_mean": tf.reduce_mean(inputs[:, :, 11]).numpy(),
+
+        # Target variable
+        "fire_any": int(tf.reduce_max(labels) > 0),
     }
 
-
-# Dataset-level conversion
 
 def dataset_to_dataframe(dataset: tf.data.Dataset) -> pd.DataFrame:
     """
     Convert a TF dataset of spatial tiles into a tabular DataFrame.
 
-    Each row corresponds to one tile.
-
     Parameters
     ----------
     dataset : tf.data.Dataset
-        Dataset yielding (inputs, labels) batches.
+        Yields (inputs, labels) batches.
 
     Returns
     -------
     pd.DataFrame
-        Columns:
-          - vs_mean
-          - fire_any
+        One row per tile with fixed feature columns.
     """
     rows = []
 
     for inputs, labels in dataset:
-        # inputs: (B, H, W, C)
-        # labels: (B, H, W, 1)
         batch_size = inputs.shape[0]
-
         for i in range(batch_size):
-            row = tile_to_features(inputs[i], labels[i])
-            rows.append(row)
+            rows.append(tile_to_features(inputs[i], labels[i]))
 
     return pd.DataFrame(rows)
