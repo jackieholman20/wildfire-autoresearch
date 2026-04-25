@@ -37,7 +37,7 @@ data/
 ├── next_day_wildfire_spread_eval_*.tfrecord
 └── next_day_wildfire_spread_test_*.tfrecord
 ```
-##Core Idea: AutoResearch for Wildfire Prediction
+## Core Idea: AutoResearch for Wildfire Prediction
 
 Instead of manually designing features and models, this project delegates exploration to an AI‑driven retry loop:
 
@@ -172,7 +172,7 @@ No GPU, no PyTorch, no heavy downloads — everything runs on CPU.
 python3 -c "import sklearn, matplotlib, numpy; print('All good')"
 ```
 
-# Run the baseline experiment
+### 4. Run the baseline experiment
 ```
 python run.py
 rm -f results.tsv
