@@ -1,21 +1,61 @@
 """
-EDITABLE -- The agent modifies this file.
-Define the model pipeline for California Housing regression.
-The function build_model() must return an sklearn-compatible estimator.
+EDITABLE — The AutoResearch agent may modify this file only.
+
+This file defines the candidate model used to predict next‑day
+wildfire spread.
+
+The function `compute_metric` must:
+- train on df_train
+- return predicted probabilities on df_eval
+
+Evaluation (ROC‑AUC), logging, and plotting are handled elsewhere
+and are frozen.
 """
 
 import numpy as np
 from sklearn.linear_model import LogisticRegression
 
+
 def compute_metric(df_train, df_eval):
+    """
+    Train a model to predict wildfire spread and return evaluation scores.
+
+    Parameters
+    ----------
+    df_train : pd.DataFrame
+        Must contain:
+          - 'vs_mean'   : mean normalized wind speed per tile
+          - 'fire_any'  : binary target (1 = fire spread, 0 = no spread)
+
+    df_eval : pd.DataFrame
+        Must contain:
+          - 'vs_mean'
+
+    Returns
+    -------
+    np.ndarray
+        Predicted probabilities of wildfire spread for df_eval,
+        shape (n_samples,)
+    """
+    # ------------------------------
+    # Baseline feature(s)
+    # ------------------------------
     X_train = df_train[["vs_mean"]]
     y_train = df_train["fire_any"]
 
+    # ------------------------------
+    # Baseline model
+    # ------------------------------
     model = LogisticRegression(
         max_iter=1000,
-        class_weight="balanced"
+        class_weight="balanced",
+        random_state=42
     )
+
     model.fit(X_train, y_train)
 
+    # ------------------------------
+    # Return probabilities for ROC‑AUC
+    # ------------------------------
     probs = model.predict_proba(df_eval[["vs_mean"]])[:, 1]
     return probs
