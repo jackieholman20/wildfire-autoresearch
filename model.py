@@ -38,7 +38,8 @@ def compute_metric(df_train, df_eval):
         shape (n_samples,)
     """
     features = ["vs_mean", "erc_mean", "pdsi_mean", "tmmx_mean", "prev_fire_mean",
-                "sph_mean", "ndvi_mean", "tmmn_mean"]
+                "sph_mean", "ndvi_mean", "tmmn_mean",
+                "elevation_mean", "th_mean", "pr_mean", "population_mean"]
     X_train = df_train[features]
     y_train = df_train["fire_any"]
 
