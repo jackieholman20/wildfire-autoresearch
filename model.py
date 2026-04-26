@@ -40,7 +40,7 @@ def compute_metric(df_train, df_eval):
     # ------------------------------
     # Baseline feature(s)
     # ------------------------------
-    features = ["vs_mean", "erc_mean", "pdsi_mean"]
+    features = ["vs_mean", "erc_mean", "pdsi_mean", "tmmx_mean"]
     X_train = df_train[features]
     y_train = df_train["fire_any"]
 
