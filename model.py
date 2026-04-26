@@ -44,9 +44,9 @@ def compute_metric(df_train, df_eval):
     y_train = df_train["fire_any"]
 
     model = GradientBoostingClassifier(
-        n_estimators=200,
+        n_estimators=400,
         max_depth=4,
-        learning_rate=0.1,
+        learning_rate=0.05,
         subsample=0.8,
         random_state=42,
     )
