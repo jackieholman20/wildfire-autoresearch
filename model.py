@@ -13,7 +13,7 @@ and are frozen.
 """
 
 import numpy as np
-from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
 
 
 def compute_metric(df_train, df_eval):
@@ -37,27 +37,20 @@ def compute_metric(df_train, df_eval):
         Predicted probabilities of wildfire spread for df_eval,
         shape (n_samples,)
     """
-    # ------------------------------
-    # Baseline feature(s)
-    # ------------------------------
     features = ["vs_mean", "erc_mean", "pdsi_mean", "tmmx_mean", "prev_fire_mean",
                 "sph_mean", "ndvi_mean", "tmmn_mean"]
     X_train = df_train[features]
     y_train = df_train["fire_any"]
 
-    # ------------------------------
-    # Baseline model
-    # ------------------------------
-    model = LogisticRegression(
-        max_iter=1000,
+    model = RandomForestClassifier(
+        n_estimators=200,
+        max_depth=8,
         class_weight="balanced",
-        random_state=42
+        random_state=42,
+        n_jobs=-1,
     )
 
     model.fit(X_train, y_train)
 
-    # ------------------------------
-    # Return probabilities for ROC‑AUC
-    # ------------------------------
     probs = model.predict_proba(df_eval[features])[:, 1]
     return probs
