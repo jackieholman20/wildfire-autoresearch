@@ -11,9 +11,17 @@ This file SHOULD NOT contain modeling or preprocessing logic.
 """
 
 import prepare
+import sys
 
 
 def main():
+    # --------------------------------------------------------
+    # 0. Parse CLI args
+    # --------------------------------------------------------
+    experiment_id  = sys.argv[1] if len(sys.argv) > 1 else "exp_unknown"
+    description    = sys.argv[2] if len(sys.argv) > 2 else "no description provided"
+    status         = sys.argv[3] if len(sys.argv) > 3 else "keep"
+
     # --------------------------------------------------------
     # 1. Load data (frozen)
     # --------------------------------------------------------
@@ -32,10 +40,10 @@ def main():
     # 3. Log results
     # --------------------------------------------------------
     prepare.log_result(
-        experiment_id="baseline",
+        experiment_id=experiment_id,
         val_auc=val_auc,
-        status="baseline",
-        description="Wind speed logistic regression baseline"
+        status=status,
+        description=description,
     )
 
     # --------------------------------------------------------

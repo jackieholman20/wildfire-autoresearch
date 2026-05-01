@@ -74,7 +74,7 @@ def log_result(experiment_id, val_auc, status, description):
     with open(RESULTS_FILE, "a", newline="") as f:
         writer = csv.writer(f, delimiter="\t")
         if not file_exists:
-            writer.writerow(["experiment", "val_auc", "status", "description"])
+            writer.writerow(["experiment_id", "val_auc", "status", "description"])
         writer.writerow([experiment_id, f"{val_auc:.6f}", status, description])
 
 
