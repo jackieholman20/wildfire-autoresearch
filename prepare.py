@@ -69,14 +69,14 @@ def evaluate(df_train, df_eval):
 # Logging
 # ------------------------------------------------------------
 
-def log_result(experiment_id, val_auc, status, description):
+def log_result(experiment_id, val_auc, status, description, duration_seconds=None):
     file_exists = os.path.exists(RESULTS_FILE)
     with open(RESULTS_FILE, "a", newline="") as f:
         writer = csv.writer(f, delimiter="\t")
         if not file_exists:
-            writer.writerow(["experiment_id", "val_auc", "status", "description"])
-        writer.writerow([experiment_id, f"{val_auc:.6f}", status, description])
-
+            writer.writerow(["experiment", "val_auc", "duration_s", "status", "description"])
+        duration_str = f"{duration_seconds:.1f}" if duration_seconds is not None else "N/A"
+        writer.writerow([experiment_id, f"{val_auc:.6f}", duration_str, status, description])
 
 # ------------------------------------------------------------
 # Plotting

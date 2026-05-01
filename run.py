@@ -12,6 +12,7 @@ This file SHOULD NOT contain modeling or preprocessing logic.
 
 import prepare
 import sys
+import time
 
 
 def main():
@@ -34,7 +35,9 @@ def main():
     # 2. Evaluate current model (from model.py)
     # --------------------------------------------------------
     # Returns validation ROC-AUC
+    t_start = time.time()
     val_auc = prepare.evaluate(df_train, df_eval)
+    elapsed = time.time() - t_start
 
     # --------------------------------------------------------
     # 3. Log results
@@ -44,6 +47,7 @@ def main():
         val_auc=val_auc,
         status=status,
         description=description,
+        duration_seconds=elapsed,
     )
 
     # --------------------------------------------------------
@@ -51,8 +55,7 @@ def main():
     # --------------------------------------------------------
     prepare.plot_results()
 
-    print(f"✅ Run completed. Validation ROC-AUC: {val_auc:.4f}")
-
+    print(f"✅ Run completed. Validation ROC-AUC: {val_auc:.4f} | Duration: {elapsed:.1f}s")
 
 if __name__ == "__main__":
     main()
