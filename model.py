@@ -42,16 +42,8 @@ def compute_metric(df_train, df_eval):
                      "sph_mean", "ndvi_mean", "tmmn_mean",
                      "elevation_mean", "th_mean", "pr_mean", "population_mean"]
 
-    def add_interactions(df):
-        import pandas as pd
-        X = df[base_features].copy()
-        X["erc_x_vs"] = df["erc_mean"] * df["vs_mean"]   # fire danger × wind
-        X["tmmx_x_erc"] = df["tmmx_mean"] * df["erc_mean"]  # heat × fire danger
-        return X
-
-    X_train = add_interactions(df_train)
+    X_train = df_train[base_features]
     y_train = df_train["fire_any"]
-
 
     model = GradientBoostingClassifier(
         n_estimators=400,
@@ -63,5 +55,5 @@ def compute_metric(df_train, df_eval):
 
     model.fit(X_train, y_train)
 
-    probs = model.predict_proba(add_interactions(df_eval))[:, 1]
+    probs = model.predict_proba(df_eval[base_features])[:, 1]
     return probs
