@@ -87,23 +87,24 @@ You do **not** need to load or preprocess TFRecords — this is already handled.
 - When an experiment finishes, it is automatically logged to results.tsv by run.py. However, you must also manually append a row to keep your own record with status and description, since run.py does not write those fields.
 - The TSV is tab-separated (NOT comma-separated — commas break descriptions) with this header:
 ```tsv
-experiment_id	val_auc	status	description
+experiment	val_auc	duration_s	status	description
 ```
 
 1. experiment_id — a short unique label for this run (e.g. exp_001, baseline)
 2. val_auc — ROC-AUC achieved (e.g. 0.731200) — use 0.000000 for crashes
-3. status — keep, discard, or crash
-4. description — short text description of what this experiment tried
+3. wall clock seconds for the evaluate() call (e.g. 34.2) — use N/A for historical runs, 0.0 for crashes
+4. status — keep, discard, or crash
+5. description — short text description of what this experiment tried
 
 - An example output:
 
 ```tsv
-experiment_id	val_auc	status	description
-baseline	0.520000	keep	baseline: wind speed logistic regression
-exp_001	0.651200	keep	added erc_mean, pdsi_mean, gradient boosting
-exp_002	0.648900	discard	switched to random forest, worse than GBM
-exp_003	0.000000	crash	added polynomial features (timeout >60s)
-exp_004	0.663100	keep	erc*vs and tmmx*erc interaction terms
+experiment	val_auc	duration_s	status	description
+baseline	0.520000	N/A	keep	baseline: wind speed logistic regression
+exp_001	0.651200	34.2	keep	added erc_mean, pdsi_mean, gradient boosting
+exp_002	0.648900	31.7	discard	switched to random forest, worse than GBM
+exp_003	0.000000	0.0	crash	added polynomial features (timeout >60s)
+exp_004	0.663100	29.8	keep	erc*vs and tmmx*erc interaction terms
 ```
 
 Do not commit results.tsv — leave it untracked by git.
