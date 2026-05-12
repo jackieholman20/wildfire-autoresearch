@@ -11,8 +11,8 @@ import numpy as np
 
 # ---------------------------------------------------------------
 # Sampling controls — adjust these to manage memory usage
-MAX_TILES = 2000        # max number of tiles to process
-PIXEL_SAMPLE_RATE = 0.1 # fraction of valid pixels to keep per tile
+MAX_TILES = 150        # max number of tiles to process
+PIXEL_SAMPLE_RATE = 0.05 # fraction of valid pixels to keep per tile
 RANDOM_SEED = 42
 # ---------------------------------------------------------------
 
