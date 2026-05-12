@@ -1,36 +1,32 @@
 """
 EDITABLE — The AutoResearch agent may modify this file only.
 
-This file defines the candidate model used to predict next‑day
+This file defines the candidate model used to predict next-day
 wildfire spread.
 
 The function `compute_metric` must:
 - train on df_train
 - return predicted probabilities on df_eval
 
-Evaluation (ROC‑AUC), logging, and plotting are handled elsewhere
+Evaluation (ROC-AUC), logging, and plotting are handled elsewhere
 and are frozen.
 """
 
-
 import numpy as np
-from sklearn.ensemble import GradientBoostingClassifier
+from sklearn.linear_model import LogisticRegression
 
 
 def compute_metric(df_train, df_eval):
     """
-    Train a model to predict wildfire spread and return evaluation scores.
+    Baseline model: logistic regression using wind speed only (vs_5),
+    the center pixel of the 3x3 neighborhood.
 
     Parameters
     ----------
     df_train : pd.DataFrame
-        Must contain:
-          - 'vs_mean'   : mean normalized wind speed per tile
-          - 'fire_any'  : binary target (1 = fire spread, 0 = no spread)
-
+        Must contain 'vs_5' and 'fire_any'
     df_eval : pd.DataFrame
-        Must contain:
-          - 'vs_mean'
+        Must contain 'vs_5'
 
     Returns
     -------
@@ -38,21 +34,12 @@ def compute_metric(df_train, df_eval):
         Predicted probabilities of wildfire spread for df_eval,
         shape (n_samples,)
     """
-    base_features = ["vs_mean", "erc_mean", "pdsi_mean", "tmmx_mean", "prev_fire_mean",
-                     "sph_mean", "ndvi_mean", "tmmn_mean",
-                     "elevation_mean", "th_mean", "pr_mean", "population_mean"]
+    base_features = ["vs_5"]  # center pixel wind speed only
 
     X_train = df_train[base_features]
     y_train = df_train["fire_any"]
 
-    model = GradientBoostingClassifier(
-        n_estimators=700,
-        max_depth=4,
-        learning_rate=0.05,
-        subsample=0.8,
-        random_state=42,
-    )
-
+    model = LogisticRegression(max_iter=1000)
     model.fit(X_train, y_train)
 
     probs = model.predict_proba(df_eval[base_features])[:, 1]
