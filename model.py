@@ -13,34 +13,34 @@ and are frozen.
 """
 
 import numpy as np
-from sklearn.linear_model import LogisticRegression
+import pandas as pd
+from sklearn.ensemble import GradientBoostingClassifier
+
+FEATURE_NAMES = [
+    "elevation", "th", "vs", "tmmn", "tmmx",
+    "sph", "pr", "pdsi", "ndvi", "population", "erc", "prev_fire",
+]
+
+
+def _make_features(df):
+    data = {}
+    for feat in FEATURE_NAMES:
+        cols = [f"{feat}_{i}" for i in range(1, 10)]
+        data[f"{feat}_mean"] = df[cols].values.mean(axis=1)
+    return pd.DataFrame(data)
 
 
 def compute_metric(df_train, df_eval):
-    """
-    Baseline model: logistic regression using wind speed only (vs_5),
-    the center pixel of the 3x3 neighborhood.
-
-    Parameters
-    ----------
-    df_train : pd.DataFrame
-        Must contain 'vs_5' and 'fire_any'
-    df_eval : pd.DataFrame
-        Must contain 'vs_5'
-
-    Returns
-    -------
-    np.ndarray
-        Predicted probabilities of wildfire spread for df_eval,
-        shape (n_samples,)
-    """
-    base_features = ["vs_5"]  # center pixel wind speed only
-
-    X_train = df_train[base_features]
+    X_train = _make_features(df_train)
+    X_eval = _make_features(df_eval)
     y_train = df_train["fire_any"]
 
-    model = LogisticRegression(max_iter=1000)
+    model = GradientBoostingClassifier(
+        n_estimators=700,
+        max_depth=4,
+        learning_rate=0.05,
+        subsample=0.8,
+        random_state=42,
+    )
     model.fit(X_train, y_train)
-
-    probs = model.predict_proba(df_eval[base_features])[:, 1]
-    return probs
+    return model.predict_proba(X_eval)[:, 1]
