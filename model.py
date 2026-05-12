@@ -12,9 +12,9 @@ Evaluation (ROC-AUC), logging, and plotting are handled elsewhere
 and are frozen.
 """
 
-import numpy as np
 import pandas as pd
 from sklearn.ensemble import GradientBoostingClassifier
+from sklearn.utils.class_weight import compute_sample_weight
 
 FEATURE_NAMES = [
     "elevation", "th", "vs", "tmmn", "tmmx",
@@ -34,6 +34,7 @@ def compute_metric(df_train, df_eval):
     X_train = _make_features(df_train)
     X_eval = _make_features(df_eval)
     y_train = df_train["fire_any"]
+    sample_weight = compute_sample_weight("balanced", y_train)
 
     model = GradientBoostingClassifier(
         n_estimators=700,
@@ -42,5 +43,5 @@ def compute_metric(df_train, df_eval):
         subsample=0.8,
         random_state=42,
     )
-    model.fit(X_train, y_train)
+    model.fit(X_train, y_train, sample_weight=sample_weight)
     return model.predict_proba(X_eval)[:, 1]
