@@ -1,131 +1,182 @@
-# AutoResearch Agent Instructions — Wildfire Spread Prediction
+# AutoResearch — Wildfire Spread Prediction
 
-## Objective
-
-Maximize **validation ROC‑AUC** for predicting **next‑day wildfire spread**
-using satellite‑derived environmental features.
-
-A baseline model using **mean wind speed only** achieves a validation
-ROC‑AUC of approximately **0.52**. Your goal is to autonomously discover
-feature combinations and models that improve upon this baseline.
+This is an autonomous experiment to discover the best model for predicting next-day wildfire spread at the **pixel level** using a 3×3 km neighborhood window of satellite-derived features.
 
 ---
 
-
 ## Setup
+
 To set up a new experiment, work with the user to:
 
-1. Agree on a run tag: propose a tag based on today's date (e.g. apr30). The branch autoresearch/<tag> must not already exist — this is a fresh run.
-2. Create the branch: git checkout -b autoresearch/<tag> from current master.
-3. Read the in-scope files: Read these files for full context:
-- model.py — the only file you may modify. Model definition, feature engineering, training.
-- run.py — frozen orchestration layer. Loads data, calls compute_metric, logs, and plots.
-- prepare.py — frozen. Data loading, evaluation (ROC-AUC), logging, and plotting logic.
+1. **Agree on a run tag**: propose a tag based on today's date (e.g. `may30`). The branch `autoresearch/<tag>` must not already exist — this is a fresh run.
+2. **Create the branch**: `git checkout -b autoresearch/<tag>` from current master.
+3. **Read the in-scope files**: Read these files for full context:
+   - `model.py` — the only file you may modify. Model definition, feature engineering, training.
+   - `run.py` — frozen orchestration layer. Loads data, calls `compute_metric`, logs, and plots.
+   - `prepare.py` — frozen. Data loading, evaluation (ROC-AUC), logging, and plotting logic.
+   - `processing/features.py` — frozen. Defines the pixel-level feature schema.
+4. **Initialize results.tsv**: Create `results.tsv` with just the header row if it does not already exist. The baseline will be recorded after the first run.
+5. **Confirm and go**: Confirm setup looks good, then kick off the experimentation loop.
 
-4. Initialize results.tsv: Create results.tsv with just the header row if it does not already exist. The baseline will be recorded after the first run.
-5. Confirm and go: Confirm setup looks good, then kick off the experimentation loop.
+---
 
 ## Experimentation Rules
-What you **CAN** do:
-1. Modify model.py — this is the only file you edit. Everything inside is fair game: features, feature interactions, model architecture, hyperparameters.
 
-What you **CANNOT** do:
-1. Modify prepare.py, run.py, or anything under processing/.
-2. Change the name or signature of compute_metric.
-3. Add new files, datasets, or external downloads.
-4. Install new packages beyond what is already available.
-5. Compute ROC-AUC inside model.py or hard-code labels.
-6. Return class labels — compute_metric must return predicted probabilities.
+**What you CAN do:**
+- Modify `model.py` — this is the **only** file you edit. Features, feature engineering, model architecture, and hyperparameters are all fair game.
+
+**What you CANNOT do:**
+- Modify `prepare.py`, `run.py`, or anything under `processing/`
+- Change the name or signature of `compute_metric`
+- Add new files, datasets, or external downloads
+- Install new packages beyond what is already available
+- Compute ROC-AUC inside `model.py` or hard-code labels
+- Return class labels — `compute_metric` must return **predicted probabilities**
 
 **The goal is simple: maximize validation ROC-AUC.**
-- A baseline model using mean wind speed only achieves approximately 0.52. Every experiment must complete in under 60 seconds on CPU.
-- **Simplicity criterion:** All else being equal, simpler is better. A tiny improvement that adds ugly complexity is not worth it. Removing something and getting equal or better results is a win. When evaluating whether to keep a change, weigh complexity cost against improvement magnitude. A 0.001 ROC-AUC gain from 30 extra lines of hacky code? Probably not worth it. A 0.001 gain from deleting code? Keep it. Equal performance but cleaner code? Keep it.
-- **The first run:** Your very first run should always establish the baseline — run the script as-is before making any changes.
+
+Every experiment must complete in **under 60 seconds** on CPU.
+
+**Simplicity criterion:** All else being equal, simpler is better. A 0.001 ROC-AUC gain from 30 extra lines of hacky code? Not worth it. A 0.001 gain from deleting code? Keep it. Equal performance but cleaner code? Keep it.
+
+**The first run:** Always establish the baseline first — run the script as-is before making any changes.
 
 ---
 
 ## Data Context
 
-Each row represents a 64×64 km spatial tile derived from satellite data.
+Each row is one **pixel**. Features follow the naming convention `{feature}_{n}` where `n = 1–9` is the position in the 3×3 neighborhood (center pixel = 5).
 
-Available columns in `df_train` and `df_eval` may include (not exhaustive):
+Available features per neighbor position:
 
-- `vs_mean`   — mean normalized wind speed
-- `erc_mean`  — energy release component
-- `pdsi_mean` — Palmer drought severity index
-- `ndvi_mean` — vegetation index
-- other aggregated satellite features
+| Feature | Description |
+|---------|-------------|
+| `elevation_{1-9}` | Topographic elevation |
+| `th_{1-9}` | Wind direction |
+| `vs_{1-9}` | Wind speed |
+| `tmmn_{1-9}` | Minimum temperature |
+| `tmmx_{1-9}` | Maximum temperature |
+| `sph_{1-9}` | Specific humidity |
+| `pr_{1-9}` | Precipitation |
+| `pdsi_{1-9}` | Palmer drought severity index |
+| `ndvi_{1-9}` | Vegetation index |
+| `population_{1-9}` | Population density |
+| `erc_{1-9}` | Energy release component |
+| `prev_fire_{1-9}` | Previous fire mask |
 
-Target variable:
-
-- `fire_any` — binary indicator of wildfire spread within the next 24 hours
+**Target variable:** `fire_any` — did any pixel in the 3×3 neighborhood burn next day?
 
 You do **not** need to load or preprocess TFRecords — this is already handled.
 
 ---
 
+## Known Dead Ends — Do NOT Revisit
+
+These have been thoroughly explored and consistently fail:
+
+- **All 108 raw pixel features** (`ALL_PIXEL_FEATURES`) — times out or underfits
+- **HistGradientBoosting with `max_iter` > 500** — exceeds 60s CPU budget
+- **Center pixel features only** (e.g. `vs_5` alone) — significantly worse than neighborhood means
+- **Feature interactions** (e.g. `erc×vs`, `tmmx×pdsi`) — hurt performance
+- **`n_estimators` > 700** for standard GBM — overfits and times out
+- **`max_depth` = 5** — consistently worse than depth 4
+
+---
+
+## Current Best
+
+The winning approach as of the last session:
+
+```python
+# 12 neighborhood means (average across all 9 positions per feature)
+FEATURE_NAMES = ["elevation", "th", "vs", "tmmn", "tmmx",
+                 "sph", "pr", "pdsi", "ndvi", "population", "erc", "prev_fire"]
+
+# Compute means across 9 neighbor positions
+for feat in FEATURE_NAMES:
+    X[f"{feat}_mean"] = df[[f"{feat}_{i}" for i in range(1, 10)]].mean(axis=1)
+
+# GradientBoostingClassifier
+model = GradientBoostingClassifier(
+    n_estimators=700,
+    max_depth=4,
+    learning_rate=0.05,
+    max_features="sqrt",
+    random_state=42,
+)
+model.fit(X_train, y_train, sample_weight=compute_sample_weight("balanced", y_train))
+```
+
+**Best validation ROC-AUC: 0.7471** (exp_25)
+
+All new experiments should build from this foundation.
+
+---
 
 ## Ideas to Explore
 
-- **Include additional predictors:** erc_mean, pdsi_mean, ndvi_mean, tmmx_mean, prev_fire_mean, sph_mean, th_mean, pr_mean, population_mean, elevation_mean
-- Feature interactions and nonlinear transforms (e.g. erc_mean * vs_mean, log transforms)
-- Model choices: regularized logistic regression, RandomForest, GradientBoosting, HistGradientBoosting
-- Hyperparameter sweeps on the current best model
+Build on the current best — 12 neighborhood means + GBM + balanced weights + `max_features=sqrt`:
+
+- **Hyperparameter tuning**: `learning_rate` (try 0.03, 0.08), `subsample` (try 0.7, 0.9)
+- **Selective neighbor features**: instead of all-9 means, use specific positions for key features like `prev_fire` and `erc` (e.g. upwind neighbors only)
+- **Additional engineered features**: log transforms on skewed features (`population`, `pr`), ratio features (`tmmx/tmmn`)
+- **RandomForest** with the same 12 means and balanced weights as a comparison
+- **Feature selection**: drop low-signal features (check if removing `th` or `population` hurts)
 
 ---
 
 ## Output Format
-- Each run produces a single line printed to stdout:
+
+Each run prints to stdout:
+
 ```
-✅ Run completed. Validation ROC-AUC: 0.7312
+✅ Run completed. Validation ROC-AUC: 0.7471 | Duration: 14.9s
 ```
-- You can also read the last logged result directly from results.tsv to confirm it was recorded correctly.
 
 ---
 
-## Logging results
-- When an experiment finishes, it is automatically logged to results.tsv by run.py. However, you must also manually append a row to keep your own record with status and description, since run.py does not write those fields.
-- The TSV is tab-separated (NOT comma-separated — commas break descriptions) with this header:
-```tsv
+## Logging Results
+
+Results are automatically logged to `results.tsv` by `run.py`. Do **not** manually append rows — this creates duplicates. Only read `results.tsv` to check prior results, never write to it directly.
+
+The TSV is tab-separated with this header:
+
+```
 experiment	val_auc	duration_s	status	description
 ```
 
-1. experiment_id — a short unique label for this run (e.g. exp_001, baseline)
-2. val_auc — ROC-AUC achieved (e.g. 0.731200) — use 0.000000 for crashes
-3. wall clock seconds for the evaluate() call (e.g. 34.2) — use N/A for historical runs, 0.0 for crashes
-4. status — keep, discard, or crash
-5. description — short text description of what this experiment tried
+Example:
 
-- An example output:
-
-```tsv
+```
 experiment	val_auc	duration_s	status	description
-baseline	0.520000	N/A	keep	baseline: wind speed logistic regression
-exp_001	0.651200	34.2	keep	added erc_mean, pdsi_mean, gradient boosting
-exp_002	0.648900	31.7	discard	switched to random forest, worse than GBM
-exp_003	0.000000	0.0	crash	added polynomial features (timeout >60s)
-exp_004	0.663100	29.8	keep	erc*vs and tmmx*erc interaction terms
+baseline	0.519600	0.1	keep	logistic regression, center pixel wind speed only
+exp_13	0.723000	58.0	keep	GBM n=700 depth=4 lr=0.05 — 12 neighborhood means
+exp_18	0.740800	52.6	keep	balanced sample weights — GBM n=700 12 neighborhood means
+exp_25	0.747100	14.9	keep	max_features=sqrt GBM n=700 balanced 12 means — best
 ```
 
-Do not commit results.tsv — leave it untracked by git.
+Do **not** commit `results.tsv` — leave it untracked by git.
+
+---
 
 ## The Experiment Loop
-The experiment runs on a dedicated branch (e.g. autoresearch/apr30).
+
+The experiment runs on a dedicated branch (e.g. `autoresearch/may30`).
 
 **LOOP FOREVER:**
 
-1. Read results.tsv to review all prior experiments and the current best ROC-AUC.
-2. Read the current model.py to understand the starting point.
-3. Propose ONE concrete modification — a new feature, interaction, model change, or hyperparameter tweak.
-4. Edit model.py with the change.
-5. git commit -m "feat: <short description>"
-6. Run: python run.py "<experiment_id>" "<description>" "<keep|discard|crash>" > run.log 2>&1
-7. Read the result: tail -n 5 run.log
-8. If the output is missing or the run crashed, read tail -n 50 run.log for the stack trace and attempt a fix. If the idea is fundamentally broken, skip it, log crash, and move on.
-9. Append a row to results.tsv with the commit hash, val_auc, status, and description.
-10. If improved (val_auc higher than current best): keep the commit — you have advanced the branch.
-11. If equal or worse: git reset HEAD~1 && git checkout model.py to undo the commit and revert the file.
+1. Read `results.tsv` to review all prior experiments and the current best ROC-AUC.
+2. Read the current `model.py` to understand the starting point.
+3. Propose **ONE** concrete modification — a new feature, interaction, model change, or hyperparameter tweak.
+4. Edit `model.py` with the change.
+5. `git commit -m "feat: <short description>"`
+6. Run: `python run.py "<experiment_id>" "<description>" "keep" > run.log 2>&1`
+7. Check timing: `grep "Duration" run.log` — if over 60s, log as discard and revert immediately.
+8. Read the result: `tail -n 5 run.log`
+9. If the output is missing or the run crashed, read `tail -n 50 run.log` for the stack trace. Fix if trivial, log as crash and move on if not.
+10. If **improved** (val_auc higher than current best): keep the commit — branch advances.
+11. If **equal or worse**: `git reset HEAD~1 && git checkout model.py`
 
-**Crashes:** If a run crashes or exceeds 60 seconds, use your judgment. If it's a trivial bug (typo, missing import), fix and re-run. If the idea is broken, log it as crash with 0.000000 and move on.
+**Crashes:** If a run exceeds 60 seconds or crashes, log it as `crash` with `0.000000` and move on. Do not spend more than 2 attempts fixing the same idea.
 
-**NEVER STOP:** Once the experiment loop has begun, do NOT pause to ask the human whether to continue. Do NOT ask "should I keep going?" or "is this a good stopping point?". The human may be away and expects you to continue working indefinitely until manually stopped. You are autonomous. If you run out of ideas, think harder — re-read the in-scope files, revisit near-misses, try combining successful ideas, try more radical model changes. The loop runs until the human interrupts you, period.
+**NEVER STOP:** Once the loop begins, do NOT pause to ask the human whether to continue. The human may be away and expects you to continue working indefinitely until manually stopped. If you run out of ideas, re-read the in-scope files, revisit near-misses, try combining successful ideas, or try more radical model changes. The loop runs until the human interrupts you, period.
